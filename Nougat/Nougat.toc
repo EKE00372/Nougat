@@ -1,0 +1,8 @@
+## Interface: 80300
+## Title: Nou|cff00ffffgat|r
+## Version: R1
+## Author: EK (Linodas@Illidan-US)
+## OptionalDeps: oUF, oUF_Ruri
+## Credits: HopeASD
+
+Nougat.lua
