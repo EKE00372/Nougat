@@ -2,7 +2,12 @@ local font = STANDARD_TEXT_FONT
 local fontsize = 16
 local fontflag = "OUTLINE"
 
-local format = string.format
+local C_Timer, floor, fmod, format = C_Timer, math.floor, math.fmod, string.format
+local GetHaste, GetCritChance, GetMasteryEffect = GetHaste, GetCritChance, GetMasteryEffect
+local GetDodgeChance, GetParryChance, GetBlockChance = GetDodgeChance, GetParryChance, GetBlockChance
+local UnitArmor, GetCombatRatingBonus = UnitArmor, GetCombatRatingBonus
+
+local startTime = 0
 
 --=============================================--
 ---------------    [[ APIs ]]     ---------------
@@ -43,13 +48,15 @@ local Stat = CreateFrame("Frame", "NougatFrame", UIParent)
 	Stat:SetAlpha(.4)
 	Stat:SetHitRectInsets(-5, -5, -10, -10)
 	Stat:SetFrameStrata("BACKGROUND")
-	Stat:SetPoint("CENTER", UIParent, -300, -125)
+	Stat:SetPoint("CENTER", UIParent, -320, -125)
 
 local armorText = CreateText(Stat, 0, .9, .9, .9)
 local hasteText = CreateText(Stat, -(fontsize+2), 1, 1, 0)
 local critText = CreateText(Stat, -(fontsize+2)*2, 1, .6, 0)
 local mastText = CreateText(Stat, -(fontsize+2)*3, 1, 0, .8)
 local verText = CreateText(Stat, -(fontsize+2)*4, 0, 1, 1)
+
+local timeerText = CreateText(Stat, -(fontsize+2)*5, 1, 1, 1)
 
 --==================================================--
 ---------------    [[ Functions ]]     ---------------
@@ -100,36 +107,57 @@ local function updateStatus()
 	verText:SetText(ver.." Ve")
 end
 
---================================================--
----------------    [[ Updates ]]     ---------------
---================================================--
+local function timerDisplay(seconds)
+	local minutes = floor(seconds / 60)
+	seconds = floor(fmod(seconds, 60))
+	timeerText:SetText((minutes < 10 and "0" or "") .. minutes .. ":" .. (seconds < 10 and "0" or "") .. seconds)
+end
 
 local function OnUpdate(self, elapsed)
 	self.timer = (self.timer or .5) + elapsed
+	
 	if self.timer > .5 then
-		updateStatus()
+		timerDisplay(GetTime() - satrtTime)
 		self.timer = 0
 	end
 end
 
+local function timerStart(self)
+	satrtTime = GetTime()
+	timeerText:Show()
+	self:SetScript("OnUpdate", OnUpdate)
+end
+
+local function timerEnd(self)
+	self:SetScript("OnUpdate", nil)
+	C_Timer.After(3, function() timeerText:Hide() end)
+end
+
+--================================================--
+---------------    [[ Updates ]]     ---------------
+--================================================--
+
+
+
 local function OnEvent(self, event, ...)
 	if event == "PLAYER_REGEN_DISABLED" then
 		securecall(UIFrameFadeIn, Stat, .4, 0, 1)
+		timerStart(self)
 	elseif event == "PLAYER_REGEN_ENABLED" then
 		securecall(UIFrameFadeOut, Stat, .8, 1, .4)
+		timerEnd(self)
 	else
 		updateStatus()
 	end
-	--self:SetScript("OnUpdate", OnUpdate)
 end
 
 --================================================--
 ---------------    [[ Scripts ]]     ---------------
 --================================================--
 
-Stat:RegisterEvent("PLAYER_ENTERING_WORLD")
-Stat:RegisterEvent("COMBAT_RATING_UPDATE")
-Stat:RegisterEvent("PLAYER_REGEN_DISABLED")
-Stat:RegisterEvent("PLAYER_REGEN_ENABLED")
-Stat:RegisterUnitEvent("UNIT_RESISTANCES", "player")
-Stat:SetScript("OnEvent", OnEvent)
+	Stat:RegisterEvent("PLAYER_ENTERING_WORLD")
+	Stat:RegisterEvent("COMBAT_RATING_UPDATE")
+	Stat:RegisterEvent("PLAYER_REGEN_DISABLED")
+	Stat:RegisterEvent("PLAYER_REGEN_ENABLED")
+	Stat:RegisterUnitEvent("UNIT_RESISTANCES", "player")
+	Stat:SetScript("OnEvent", OnEvent)
